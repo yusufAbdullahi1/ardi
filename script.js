@@ -59,7 +59,7 @@ function toggleMusic() {
 // ---- Yes button: always reacts, never moves ----
 function handleYesClick() {
     if (dodgeCount >= DODGES_TO_WIN) {
-        window.location.href = 'yes.html'   // chase done — go celebrate (no toast)
+        showCelebration()   // chase done — reveal in place so the music keeps playing
         return
     }
     // Too early: shrink Yes a little, in place (it's in normal flow, so it can
@@ -68,6 +68,45 @@ function handleYesClick() {
     yesBtn.style.fontSize = `${Math.max(size * 0.9, 12)}px`
     showToast(yesEarlyMsgs[yesEarlyIndex % yesEarlyMsgs.length])
     yesEarlyIndex++
+}
+
+// ---- Celebration: revealed in the same page, so music never stops ----
+// The Yes click is a real user gesture in THIS document, and #bg-music is already
+// playing, so swapping views keeps the song going with no extra tap. (A full page
+// navigation could not carry the audio across on mobile.)
+function showCelebration() {
+    const celebration = document.getElementById('celebration')
+    if (!celebration) {
+        window.location.href = 'yes.html'   // fallback: standalone page
+        return
+    }
+    document.getElementById('question').style.display = 'none'
+    noBtn.style.display = 'none'            // it's position:fixed after dodging
+    celebration.hidden = false
+
+    // Keep the already-playing music going (and ensure sound on this gesture).
+    if (musicPlaying) {
+        music.muted = false
+        music.play().catch(() => {})
+    }
+
+    try { launchConfetti() } catch (e) { /* confetti CDN is optional */ }
+}
+
+function launchConfetti() {
+    const colors = ['#ff69b4', '#ff1493', '#ff85a2', '#ffb3c1', '#ff0000', '#ff6347', '#fff', '#ffdf00']
+    const end = Date.now() + 6000
+
+    confetti({ particleCount: 150, spread: 100, origin: { x: 0.5, y: 0.3 }, colors })
+
+    const interval = setInterval(() => {
+        if (Date.now() > end) {
+            clearInterval(interval)
+            return
+        }
+        confetti({ particleCount: 40, angle: 60, spread: 55, origin: { x: 0, y: 0.6 }, colors })
+        confetti({ particleCount: 40, angle: 120, spread: 55, origin: { x: 1, y: 0.6 }, colors })
+    }, 300)
 }
 
 // ---- No button: every click/tap moves it and shows a popup ----
