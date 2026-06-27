@@ -1,30 +1,40 @@
 let musicPlaying = false
 
 window.addEventListener('load', () => {
-    launchConfetti()
+    // Set up music FIRST. The confetti library loads from a CDN; if that ever
+    // fails to load, the thrown error must not stop the music from working.
+    setupMusic()
+    try {
+        launchConfetti()
+    } catch (e) {
+        // Confetti is decorative — ignore if the CDN didn't load.
+    }
+})
 
+function setupMusic() {
     const music = document.getElementById('bg-music')
     music.volume = 0.3
     musicPlaying = true
     document.getElementById('music-toggle').textContent = '🔊'
 
-    // Try a silent autoplay (desktop may allow it; mobile won't). A page
-    // navigation does NOT carry the user's gesture, so mobile blocks audible
-    // playback until the first interaction.
-    music.muted = true
-    music.play().then(() => { music.muted = false }).catch(() => {})
-
-    // Reliable mobile start: unmute AND call play() inside the first gesture.
-    // Listeners are passive and never dispatch clicks, then remove themselves.
-    const unlockEvents = ['pointerdown', 'touchstart', 'click', 'keydown']
-    function unlockMusic() {
-        unlockEvents.forEach(ev => document.removeEventListener(ev, unlockMusic, true))
-        if (!musicPlaying) return
+    // A page navigation does NOT carry a user gesture, so mobile blocks autoplay.
+    // Start the music on the first interaction. We keep listening until play()
+    // actually succeeds, so a failed first attempt retries on the next gesture.
+    const events = ['pointerdown', 'touchend', 'click', 'keydown']
+    function start() {
+        if (!musicPlaying) { stopListening(); return }
         music.muted = false
-        music.play().catch(() => {})
+        music.play().then(stopListening).catch(() => {})
     }
-    unlockEvents.forEach(ev => document.addEventListener(ev, unlockMusic, { capture: true, passive: true }))
-})
+    function stopListening() {
+        events.forEach(ev => document.removeEventListener(ev, start, true))
+    }
+    events.forEach(ev => document.addEventListener(ev, start, { capture: true, passive: true }))
+
+    // Desktop may allow immediate playback; harmless if it's blocked.
+    music.muted = false
+    music.play().catch(() => {})
+}
 
 function launchConfetti() {
     const colors = ['#ff69b4', '#ff1493', '#ff85a2', '#ffb3c1', '#ff0000', '#ff6347', '#fff', '#ffdf00']
