@@ -37,18 +37,21 @@ const yesBtn = document.getElementById('yes-btn')
 const noBtn = document.getElementById('no-btn')
 const music = document.getElementById('bg-music')
 
-// Autoplay: audio starts muted (bypasses browser policy), unmute immediately
-music.muted = true
+// Background music. Try a silent autoplay (allowed on desktop; mobile ignores it).
 music.volume = 0.3
-music.play().then(() => {
+music.muted = true
+music.play().then(() => { music.muted = false }).catch(() => {})
+
+// Unlock audible playback on the user's first gesture. We listen for ONE
+// `pointerdown` in the capture phase: a pointerdown is NOT a click, so it can
+// never fire the Yes/No buttons, and we never call preventDefault, so the tap
+// itself still works normally. Respects the toggle and never restarts music.
+function unlockMusic() {
+    if (!musicPlaying) return          // user already turned it off via the toggle
     music.muted = false
-}).catch(() => {
-    // Fallback: unmute on first interaction
-    document.addEventListener('click', () => {
-        music.muted = false
-        music.play().catch(() => {})
-    }, { once: true })
-})
+    if (music.paused) music.play().catch(() => {})
+}
+document.addEventListener('pointerdown', unlockMusic, { once: true, capture: true, passive: true })
 
 function toggleMusic() {
     if (musicPlaying) {
@@ -123,10 +126,14 @@ function swapGif(src) {
 
 function enableRunaway() {
     noBtn.addEventListener('mouseover', runAway)
-    noBtn.addEventListener('touchstart', runAway, { passive: true })
+    noBtn.addEventListener('touchstart', runAway, { passive: false })
 }
 
-function runAway() {
+function runAway(e) {
+    // Suppress the synthetic "ghost click" mobile fires ~300ms after a touch:
+    // once the No button jumps away, that click could otherwise land on the
+    // (now larger) Yes button and trigger it by accident.
+    if (e && e.cancelable) e.preventDefault()
     const margin = 20
     const btnW = noBtn.offsetWidth
     const btnH = noBtn.offsetHeight
