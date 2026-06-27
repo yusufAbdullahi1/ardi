@@ -16,11 +16,27 @@ const yesEarlyMsgs = [
 ]
 let yesEarlyIndex = 0
 
+// ---- Doll reactions: the middle gif changes as No keeps dodging ----
+// Index 0 is the starting doll (already shown in index.html); each dodge advances
+// one stage, capped at the last. The celebration doll is a separate element, so
+// these swaps never touch it.
+const gifStages = [
+    "https://media.tenor.com/EBV7OT7ACfwAAAAj/u-u-qua-qua-u-quaa.gif",    // 0 normal
+    "https://media1.tenor.com/m/uDugCXK4vI4AAAAd/chiikawa-hachiware.gif",  // 1 confused
+    "https://media.tenor.com/f_rkpJbH1s8AAAAj/somsom1012.gif",             // 2 pleading
+    "https://media.tenor.com/OGY9zdREsVAAAAAj/somsom1012.gif",             // 3 sad
+    "https://media1.tenor.com/m/WGfra-Y_Ke0AAAAd/chiikawa-sad.gif",        // 4 sadder
+    "https://media.tenor.com/CivArbX7NzQAAAAj/somsom1012.gif",             // 5 devastated
+    "https://media.tenor.com/5_tv1HquZlcAAAAj/chiikawa.gif",               // 6 very devastated
+    "https://media1.tenor.com/m/uDugCXK4vI4AAAAC/chiikawa-hachiware.gif"   // 7 crying
+]
+
 // ---- Elements ----
 const yesBtn = document.getElementById('yes-btn')
 const noBtn = document.getElementById('no-btn')
 const toast = document.getElementById('tease-toast')
 const music = document.getElementById('bg-music')
+const catGif = document.getElementById('cat-gif')
 
 // Background music. Try a silent autoplay (desktop may allow it; mobile won't).
 music.volume = 0.3
@@ -115,9 +131,20 @@ function launchConfetti() {
 function handleNoClick() {
     dodgeCount++
     moveNoToSafeSpot()
+    swapGif(gifStages[Math.min(dodgeCount, gifStages.length - 1)])
     showToast(dodgeCount === 1
         ? DODGE_FIRST
         : dodgeLaterMsgs[(dodgeCount - 2) % dodgeLaterMsgs.length])
+}
+
+// Fade the middle doll out, swap the source, fade it back in.
+function swapGif(src) {
+    if (!catGif) return
+    catGif.style.opacity = '0'
+    setTimeout(() => {
+        catGif.src = src
+        catGif.style.opacity = '1'
+    }, 200)
 }
 
 // ---- Toast helper ----
