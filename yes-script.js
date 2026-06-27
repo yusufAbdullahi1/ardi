@@ -3,12 +3,23 @@ let musicPlaying = false
 window.addEventListener('load', () => {
     launchConfetti()
 
-    // Autoplay music (works since user clicked Yes to get here)
     const music = document.getElementById('bg-music')
     music.volume = 0.3
-    music.play().catch(() => {})
     musicPlaying = true
     document.getElementById('music-toggle').textContent = '🔊'
+
+    // Try to start right away (works on desktop). A page navigation does NOT
+    // carry the user's gesture, so mobile blocks this; fall back to starting on
+    // the first interaction. Listeners are passive and never dispatch clicks.
+    music.play().catch(() => {
+        const unlockEvents = ['pointerdown', 'touchstart', 'click', 'keydown']
+        function unlockMusic() {
+            unlockEvents.forEach(ev => document.removeEventListener(ev, unlockMusic, true))
+            if (!musicPlaying) return
+            music.play().catch(() => {})
+        }
+        unlockEvents.forEach(ev => document.addEventListener(ev, unlockMusic, { capture: true, passive: true }))
+    })
 })
 
 function launchConfetti() {

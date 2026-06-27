@@ -37,21 +37,26 @@ const yesBtn = document.getElementById('yes-btn')
 const noBtn = document.getElementById('no-btn')
 const music = document.getElementById('bg-music')
 
-// Background music. Try a silent autoplay (allowed on desktop; mobile ignores it).
+// Background music. Try a silent autoplay (desktop may allow it; mobile won't).
 music.volume = 0.3
 music.muted = true
 music.play().then(() => { music.muted = false }).catch(() => {})
 
-// Unlock audible playback on the user's first gesture. We listen for ONE
-// `pointerdown` in the capture phase: a pointerdown is NOT a click, so it can
-// never fire the Yes/No buttons, and we never call preventDefault, so the tap
-// itself still works normally. Respects the toggle and never restarts music.
+// Reliable mobile start: unmute AND call play() inside the user's first gesture.
+// iOS only unlocks sound when play() runs during a real interaction, so we must
+// call it every time (the audio is already "playing" muted via autoplay, so a
+// `paused` check would skip it). We listen for several gesture types and act on
+// whichever fires first, then remove them all. These are passive and never call
+// preventDefault or dispatch a click, so they can't trigger the Yes/No buttons.
+// Calling play() on already-playing audio is a no-op, so music is never restarted.
+const unlockEvents = ['pointerdown', 'touchstart', 'click', 'keydown']
 function unlockMusic() {
+    unlockEvents.forEach(ev => document.removeEventListener(ev, unlockMusic, true))
     if (!musicPlaying) return          // user already turned it off via the toggle
     music.muted = false
-    if (music.paused) music.play().catch(() => {})
+    music.play().catch(() => {})
 }
-document.addEventListener('pointerdown', unlockMusic, { once: true, capture: true, passive: true })
+unlockEvents.forEach(ev => document.addEventListener(ev, unlockMusic, { capture: true, passive: true }))
 
 function toggleMusic() {
     if (musicPlaying) {
@@ -92,11 +97,13 @@ function handleNoClick() {
     const msgIndex = Math.min(noClickCount, noMessages.length - 1)
     noBtn.textContent = noMessages[msgIndex]
 
-    // Grow the Yes button bigger each time
+    // Grow the Yes button each time, but cap it relative to the viewport so the
+    // No button always has room to dodge to a spot that isn't on top of it.
     const currentSize = parseFloat(window.getComputedStyle(yesBtn).fontSize)
-    yesBtn.style.fontSize = `${currentSize * 1.35}px`
-    const padY = Math.min(18 + noClickCount * 5, 60)
-    const padX = Math.min(45 + noClickCount * 10, 120)
+    const maxFont = Math.min(window.innerWidth, window.innerHeight) * 0.11
+    yesBtn.style.fontSize = `${Math.min(currentSize * 1.35, maxFont)}px`
+    const padY = Math.min(18 + noClickCount * 5, 60, window.innerHeight * 0.06)
+    const padX = Math.min(45 + noClickCount * 10, 120, window.innerWidth * 0.15)
     yesBtn.style.padding = `${padY}px ${padX}px`
 
     // Shrink No button to contrast
@@ -127,6 +134,7 @@ function swapGif(src) {
 function enableRunaway() {
     noBtn.addEventListener('mouseover', runAway)
     noBtn.addEventListener('touchstart', runAway, { passive: false })
+    runAway() // jump to a safe spot immediately so it's never left sitting on Yes
 }
 
 function runAway(e) {
@@ -134,17 +142,61 @@ function runAway(e) {
     // once the No button jumps away, that click could otherwise land on the
     // (now larger) Yes button and trigger it by accident.
     if (e && e.cancelable) e.preventDefault()
+
     const margin = 20
+    const buffer = 28 // clear space to keep around the Yes button
     const btnW = noBtn.offsetWidth
     const btnH = noBtn.offsetHeight
-    const maxX = window.innerWidth - btnW - margin
-    const maxY = window.innerHeight - btnH - margin
+    const maxX = Math.max(window.innerWidth - btnW - margin, margin / 2)
+    const maxY = Math.max(window.innerHeight - btnH - margin, margin / 2)
 
-    const randomX = Math.random() * maxX + margin / 2
-    const randomY = Math.random() * maxY + margin / 2
+    const yesRect = yesBtn.getBoundingClientRect()
+
+    // Try random spots until one is clear of the Yes button.
+    let randomX, randomY, attempts = 0
+    do {
+        randomX = Math.random() * maxX + margin / 2
+        randomY = Math.random() * maxY + margin / 2
+        attempts++
+    } while (attempts < 40 && overlapsYes(randomX, randomY, btnW, btnH, yesRect, buffer))
+
+    // Guaranteed fallback: drop it into whichever gap around the Yes button has
+    // the most room, flush to that edge, so it never sits on top of Yes.
+    if (overlapsYes(randomX, randomY, btnW, btnH, yesRect, buffer)) {
+        const spaceLeft = yesRect.left
+        const spaceRight = window.innerWidth - yesRect.right
+        const spaceTop = yesRect.top
+        const spaceBottom = window.innerHeight - yesRect.bottom
+        const mostSpace = Math.max(spaceLeft, spaceRight, spaceTop, spaceBottom)
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi))
+
+        if (mostSpace === spaceRight) {
+            randomX = clamp(yesRect.right + buffer, margin / 2, maxX)
+            randomY = clamp(yesRect.top, margin / 2, maxY)
+        } else if (mostSpace === spaceLeft) {
+            randomX = clamp(yesRect.left - buffer - btnW, margin / 2, maxX)
+            randomY = clamp(yesRect.top, margin / 2, maxY)
+        } else if (mostSpace === spaceBottom) {
+            randomX = clamp(yesRect.left, margin / 2, maxX)
+            randomY = clamp(yesRect.bottom + buffer, margin / 2, maxY)
+        } else {
+            randomX = clamp(yesRect.left, margin / 2, maxX)
+            randomY = clamp(yesRect.top - buffer - btnH, margin / 2, maxY)
+        }
+    }
 
     noBtn.style.position = 'fixed'
     noBtn.style.left = `${randomX}px`
     noBtn.style.top = `${randomY}px`
     noBtn.style.zIndex = '50'
+}
+
+// True if a No button at (x, y) would touch or come within `buffer` px of Yes.
+function overlapsYes(x, y, w, h, yesRect, buffer) {
+    return !(
+        x + w + buffer < yesRect.left ||
+        x > yesRect.right + buffer ||
+        y + h + buffer < yesRect.top ||
+        y > yesRect.bottom + buffer
+    )
 }
