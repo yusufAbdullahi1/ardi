@@ -1,3 +1,20 @@
+:root {
+    /* Lavender theme — pale lavender → soft mauve, light & airy */
+    --bg-base: #f3ecfb;
+    --bg-image:
+        radial-gradient(circle at 15% 85%, #d8c5f0 0%, transparent 42%),
+        radial-gradient(circle at 85% 15%, #c9b3e8 0%, transparent 42%),
+        radial-gradient(circle at 50% 50%, #faf5ff 0%, transparent 60%);
+    --accent: #8155c6;
+    --accent-shadow: rgba(124, 92, 191, 0.22);
+    --yes-bg: linear-gradient(135deg, #b794f6, #9f7aea);
+    --yes-bg-hover: linear-gradient(135deg, #9f7aea, #8b6bd8);
+    --yes-shadow: rgba(159, 122, 234, 0.45);
+    --no-bg: linear-gradient(135deg, #c3a6e8, #ab8ad6);
+    --no-bg-hover: linear-gradient(135deg, #ab8ad6, #9472c4);
+    --no-shadow: rgba(171, 138, 214, 0.4);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -5,17 +22,14 @@
 }
 
 body {
-    background-color: #FFE4E8;
+    background-color: var(--bg-base);
     font-family: 'Nunito', sans-serif;
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
     overflow: hidden;
-    background-image:
-        radial-gradient(circle at 15% 85%, #ffb3c1 0%, transparent 40%),
-        radial-gradient(circle at 85% 15%, #ff8fa3 0%, transparent 40%),
-        radial-gradient(circle at 50% 50%, #fff0f3 0%, transparent 60%);
+    background-image: var(--bg-image);
 }
 
 /* Floating hearts background */
@@ -59,10 +73,10 @@ body {
 
 h1 {
     font-size: 2.4rem;
-    color: #d63384;
+    color: var(--accent);
     font-weight: 900;
     margin-bottom: 20px;
-    text-shadow: 2px 2px 0px rgba(214, 51, 132, 0.2);
+    text-shadow: 2px 2px 0px var(--accent-shadow);
     animation: wiggle 2s ease-in-out infinite;
 }
 
@@ -95,7 +109,7 @@ h1 {
 }
 
 #yes-btn {
-    background: linear-gradient(135deg, #4CAF50, #45a049);
+    background: var(--yes-bg);
     color: white;
     border: none;
     border-radius: 16px;
@@ -105,13 +119,13 @@ h1 {
     padding: 18px 45px;
     cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.45);
+    box-shadow: 0 6px 20px var(--yes-shadow);
     letter-spacing: 1px;
 }
 
 #yes-btn:hover {
     transform: scale(1.06) translateY(-2px);
-    box-shadow: 0 10px 28px rgba(76, 175, 80, 0.55);
+    box-shadow: 0 10px 28px var(--yes-shadow);
 }
 
 #yes-btn:active {
@@ -119,7 +133,7 @@ h1 {
 }
 
 #no-btn {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    background: var(--no-bg);
     color: white;
     border: none;
     border-radius: 12px;
@@ -129,18 +143,18 @@ h1 {
     padding: 12px 28px;
     cursor: pointer;
     transition: background 0.2s, left 0.25s ease, top 0.25s ease;
-    box-shadow: 0 4px 14px rgba(231, 76, 60, 0.4);
+    box-shadow: 0 4px 14px var(--no-shadow);
 }
 
 #no-btn:hover {
-    background: linear-gradient(135deg, #c0392b, #a93226);
+    background: var(--no-bg-hover);
 }
 
 
 #tease-toast {
     margin-top: 14px;
     font-size: 1rem;
-    color: #d63384;
+    color: var(--accent);
     font-weight: 700;
     font-style: italic;
     opacity: 0;
@@ -189,7 +203,7 @@ h1 {
 
 .yes-message {
     font-size: 1.4rem;
-    color: #e91e8c;
+    color: var(--accent);
     font-weight: 700;
     margin-top: 24px;
     animation: fadeIn 1s ease 0.5s both;
