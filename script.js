@@ -86,7 +86,7 @@ function showToast(msg) {
     toast.textContent = msg
     toast.classList.add('show')
     clearTimeout(toast._timer)
-    toast._timer = setTimeout(() => toast.classList.remove('show'), 2500)
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 4500)
 }
 
 // ---- Positioning: keep No fully on screen and clear of Yes ----
