@@ -70,15 +70,10 @@ function handleYesClick() {
     yesEarlyIndex++
 }
 
-// ---- No button: never clickable, always dodges ----
-// Any hover, touch, or click makes it run; it never counts as an answer and its
-// text never changes.
-noBtn.addEventListener('mouseover', dodge)
-noBtn.addEventListener('touchstart', dodge, { passive: false })
-function handleNoClick() { dodge() }   // covers the inline onclick / keyboard
-
-function dodge(e) {
-    if (e && e.cancelable) e.preventDefault()   // stop the mobile ghost click
+// ---- No button: every click/tap moves it and shows a popup ----
+// No hover. A tap on mobile fires a click too, so this one handler works on both
+// phone and desktop. The button's text never changes.
+function handleNoClick() {
     dodgeCount++
     moveNoToSafeSpot()
     showToast(dodgeCount === 1
