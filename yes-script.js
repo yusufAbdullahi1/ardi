@@ -8,18 +8,22 @@ window.addEventListener('load', () => {
     musicPlaying = true
     document.getElementById('music-toggle').textContent = '🔊'
 
-    // Try to start right away (works on desktop). A page navigation does NOT
-    // carry the user's gesture, so mobile blocks this; fall back to starting on
-    // the first interaction. Listeners are passive and never dispatch clicks.
-    music.play().catch(() => {
-        const unlockEvents = ['pointerdown', 'touchstart', 'click', 'keydown']
-        function unlockMusic() {
-            unlockEvents.forEach(ev => document.removeEventListener(ev, unlockMusic, true))
-            if (!musicPlaying) return
-            music.play().catch(() => {})
-        }
-        unlockEvents.forEach(ev => document.addEventListener(ev, unlockMusic, { capture: true, passive: true }))
-    })
+    // Try a silent autoplay (desktop may allow it; mobile won't). A page
+    // navigation does NOT carry the user's gesture, so mobile blocks audible
+    // playback until the first interaction.
+    music.muted = true
+    music.play().then(() => { music.muted = false }).catch(() => {})
+
+    // Reliable mobile start: unmute AND call play() inside the first gesture.
+    // Listeners are passive and never dispatch clicks, then remove themselves.
+    const unlockEvents = ['pointerdown', 'touchstart', 'click', 'keydown']
+    function unlockMusic() {
+        unlockEvents.forEach(ev => document.removeEventListener(ev, unlockMusic, true))
+        if (!musicPlaying) return
+        music.muted = false
+        music.play().catch(() => {})
+    }
+    unlockEvents.forEach(ev => document.addEventListener(ev, unlockMusic, { capture: true, passive: true }))
 })
 
 function launchConfetti() {
@@ -67,6 +71,7 @@ function toggleMusic() {
         musicPlaying = false
         document.getElementById('music-toggle').textContent = '🔇'
     } else {
+        music.muted = false
         music.play()
         musicPlaying = true
         document.getElementById('music-toggle').textContent = '🔊'
