@@ -1,40 +1,25 @@
-const gifStages = [
-    "https://media.tenor.com/EBV7OT7ACfwAAAAj/u-u-qua-qua-u-quaa.gif",    // 0 normal
-    "https://media1.tenor.com/m/uDugCXK4vI4AAAAd/chiikawa-hachiware.gif",  // 1 confused
-    "https://media.tenor.com/f_rkpJbH1s8AAAAj/somsom1012.gif",             // 2 pleading
-    "https://media.tenor.com/OGY9zdREsVAAAAAj/somsom1012.gif",             // 3 sad
-    "https://media1.tenor.com/m/WGfra-Y_Ke0AAAAd/chiikawa-sad.gif",       // 4 sadder
-    "https://media.tenor.com/CivArbX7NzQAAAAj/somsom1012.gif",             // 5 devastated
-    "https://media.tenor.com/5_tv1HquZlcAAAAj/chiikawa.gif",               // 6 very devastated
-    "https://media1.tenor.com/m/uDugCXK4vI4AAAAC/chiikawa-hachiware.gif"  // 7 crying runaway
-]
-
-const noMessages = [
-    "No",
-    "Are you sureeee? 🤨",
-    "Wrong answer, gorgeous 😏",
-    "The mirror disagrees 💜",
-    "Denying it won't work 😌",
-    "You're simply stunning, admit it 💅",
-    "You can't escape the truth 😋",
-    "Last chance to agreeee! 😤"
-]
-
-const yesTeasePokes = [
-    "go on, try saying no 👀",
-    "click no, I dareee you 😏",
-    "bet you can't even click it 💜"
-]
-
-let yesTeasedCount = 0
-
-let noClickCount = 0
-let runawayEnabled = false
+// ---- Chase state ----
+let dodgeCount = 0          // how many times the No button has run away
 let musicPlaying = true
+const DODGES_TO_WIN = 3     // No must dodge this many times before Yes works
 
-const catGif = document.getElementById('cat-gif')
+// ---- Toast copy (all teasing lives here, never on the buttons) ----
+const DODGE_FIRST = "No keeps running, Yes is right there 😌"
+const dodgeLaterMsgs = [
+    "even the No button knows you're stunning 💜",
+    "you can't deny it, gorgeous 💕",
+    "the truth is one tap away 💜"
+]
+const yesEarlyMsgs = [
+    "catch a No first, then we'll talk 😏",
+    "make it run a little, gorgeous 💜"
+]
+let yesEarlyIndex = 0
+
+// ---- Elements ----
 const yesBtn = document.getElementById('yes-btn')
 const noBtn = document.getElementById('no-btn')
+const toast = document.getElementById('tease-toast')
 const music = document.getElementById('bg-music')
 
 // Background music. Try a silent autoplay (desktop may allow it; mobile won't).
@@ -71,78 +56,46 @@ function toggleMusic() {
     }
 }
 
+// ---- Yes button: always reacts, never moves ----
 function handleYesClick() {
-    if (!runawayEnabled) {
-        // Tease her to try No first
-        const msg = yesTeasePokes[Math.min(yesTeasedCount, yesTeasePokes.length - 1)]
-        yesTeasedCount++
-        showTeaseMessage(msg)
+    if (dodgeCount >= DODGES_TO_WIN) {
+        window.location.href = 'yes.html'   // chase done — go celebrate (no toast)
         return
     }
-    window.location.href = 'yes.html'
+    // Too early: shrink Yes a little, in place (it's in normal flow, so it can
+    // never move off-screen or overlap No), and nudge her with a toast.
+    const size = parseFloat(window.getComputedStyle(yesBtn).fontSize)
+    yesBtn.style.fontSize = `${Math.max(size * 0.9, 12)}px`
+    showToast(yesEarlyMsgs[yesEarlyIndex % yesEarlyMsgs.length])
+    yesEarlyIndex++
 }
 
-function showTeaseMessage(msg) {
-    let toast = document.getElementById('tease-toast')
+// ---- No button: never clickable, always dodges ----
+// Any hover, touch, or click makes it run; it never counts as an answer and its
+// text never changes.
+noBtn.addEventListener('mouseover', dodge)
+noBtn.addEventListener('touchstart', dodge, { passive: false })
+function handleNoClick() { dodge() }   // covers the inline onclick / keyboard
+
+function dodge(e) {
+    if (e && e.cancelable) e.preventDefault()   // stop the mobile ghost click
+    dodgeCount++
+    moveNoToSafeSpot()
+    showToast(dodgeCount === 1
+        ? DODGE_FIRST
+        : dodgeLaterMsgs[(dodgeCount - 2) % dodgeLaterMsgs.length])
+}
+
+// ---- Toast helper ----
+function showToast(msg) {
     toast.textContent = msg
     toast.classList.add('show')
     clearTimeout(toast._timer)
     toast._timer = setTimeout(() => toast.classList.remove('show'), 2500)
 }
 
-function handleNoClick() {
-    noClickCount++
-
-    // Cycle through guilt-trip messages
-    const msgIndex = Math.min(noClickCount, noMessages.length - 1)
-    noBtn.textContent = noMessages[msgIndex]
-
-    // Grow the Yes button each time, but cap it relative to the viewport so the
-    // No button always has room to dodge to a spot that isn't on top of it.
-    const currentSize = parseFloat(window.getComputedStyle(yesBtn).fontSize)
-    const maxFont = Math.min(window.innerWidth, window.innerHeight) * 0.11
-    yesBtn.style.fontSize = `${Math.min(currentSize * 1.35, maxFont)}px`
-    const padY = Math.min(18 + noClickCount * 5, 60, window.innerHeight * 0.06)
-    const padX = Math.min(45 + noClickCount * 10, 120, window.innerWidth * 0.15)
-    yesBtn.style.padding = `${padY}px ${padX}px`
-
-    // Shrink No button to contrast
-    if (noClickCount >= 2) {
-        const noSize = parseFloat(window.getComputedStyle(noBtn).fontSize)
-        noBtn.style.fontSize = `${Math.max(noSize * 0.85, 10)}px`
-    }
-
-    // Swap cat GIF through stages
-    const gifIndex = Math.min(noClickCount, gifStages.length - 1)
-    swapGif(gifStages[gifIndex])
-
-    // Runaway starts at click 5
-    if (noClickCount >= 5 && !runawayEnabled) {
-        enableRunaway()
-        runawayEnabled = true
-    }
-}
-
-function swapGif(src) {
-    catGif.style.opacity = '0'
-    setTimeout(() => {
-        catGif.src = src
-        catGif.style.opacity = '1'
-    }, 200)
-}
-
-function enableRunaway() {
-    noBtn.addEventListener('mouseover', runAway)
-    noBtn.addEventListener('touchstart', runAway, { passive: false })
-    runAway() // jump to a safe spot immediately so it's never left sitting on Yes
-}
-
-function runAway(e) {
-    // Suppress the synthetic "ghost click" mobile fires ~300ms after a touch:
-    // once the No button jumps away, that click could otherwise land on the
-    // (now larger) Yes button and trigger it by accident.
-    if (e && e.cancelable) e.preventDefault()
-
+// ---- Positioning: keep No fully on screen and clear of Yes ----
+function moveNoToSafeSpot() {
     const margin = 20
     const buffer = 28 // clear space to keep around the Yes button
     const btnW = noBtn.offsetWidth
@@ -153,16 +106,16 @@ function runAway(e) {
     const yesRect = yesBtn.getBoundingClientRect()
 
     // Try random spots until one is clear of the Yes button.
-    let randomX, randomY, attempts = 0
+    let x, y, attempts = 0
     do {
-        randomX = Math.random() * maxX + margin / 2
-        randomY = Math.random() * maxY + margin / 2
+        x = Math.random() * maxX + margin / 2
+        y = Math.random() * maxY + margin / 2
         attempts++
-    } while (attempts < 40 && overlapsYes(randomX, randomY, btnW, btnH, yesRect, buffer))
+    } while (attempts < 40 && overlapsYes(x, y, btnW, btnH, yesRect, buffer))
 
     // Guaranteed fallback: drop it into whichever gap around the Yes button has
     // the most room, flush to that edge, so it never sits on top of Yes.
-    if (overlapsYes(randomX, randomY, btnW, btnH, yesRect, buffer)) {
+    if (overlapsYes(x, y, btnW, btnH, yesRect, buffer)) {
         const spaceLeft = yesRect.left
         const spaceRight = window.innerWidth - yesRect.right
         const spaceTop = yesRect.top
@@ -171,23 +124,23 @@ function runAway(e) {
         const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi))
 
         if (mostSpace === spaceRight) {
-            randomX = clamp(yesRect.right + buffer, margin / 2, maxX)
-            randomY = clamp(yesRect.top, margin / 2, maxY)
+            x = clamp(yesRect.right + buffer, margin / 2, maxX)
+            y = clamp(yesRect.top, margin / 2, maxY)
         } else if (mostSpace === spaceLeft) {
-            randomX = clamp(yesRect.left - buffer - btnW, margin / 2, maxX)
-            randomY = clamp(yesRect.top, margin / 2, maxY)
+            x = clamp(yesRect.left - buffer - btnW, margin / 2, maxX)
+            y = clamp(yesRect.top, margin / 2, maxY)
         } else if (mostSpace === spaceBottom) {
-            randomX = clamp(yesRect.left, margin / 2, maxX)
-            randomY = clamp(yesRect.bottom + buffer, margin / 2, maxY)
+            x = clamp(yesRect.left, margin / 2, maxX)
+            y = clamp(yesRect.bottom + buffer, margin / 2, maxY)
         } else {
-            randomX = clamp(yesRect.left, margin / 2, maxX)
-            randomY = clamp(yesRect.top - buffer - btnH, margin / 2, maxY)
+            x = clamp(yesRect.left, margin / 2, maxX)
+            y = clamp(yesRect.top - buffer - btnH, margin / 2, maxY)
         }
     }
 
     noBtn.style.position = 'fixed'
-    noBtn.style.left = `${randomX}px`
-    noBtn.style.top = `${randomY}px`
+    noBtn.style.left = `${x}px`
+    noBtn.style.top = `${y}px`
     noBtn.style.zIndex = '50'
 }
 
